@@ -1,0 +1,14 @@
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    host: true,
+    port: 12000,
+    allowedHosts: ["work-1-cvmznihahavevous.prod-runtime.all-hands.dev"],
+    proxy: {
+      "/api": { target: "http://localhost:12001", changeOrigin: true, rewrite: (p) => p.replace(/^\/api/, "") },
+    },
+  },
+});

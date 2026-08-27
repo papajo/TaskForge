@@ -1,3 +1,18 @@
+# env files
 .env
 .env.local
 .env.sample
+
+# python
+__pycache__/
+*.pyc
+.venv/
+
+# node
+node_modules/
+dist/
+
+# local artifacts
+backend/taskforge.db
+*.log
+tmp/
