@@ -5,9 +5,9 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Assignment, HIT, User
+from ..models import Assignment, HIT, Quiz, QuizResult, User
 from ..tasks import TASK_TYPES, parse_items
-from .deps import current_user, worker_approval_rate
+from .deps import current_user, quiz_passed, worker_approval_rate
 
 router = APIRouter(prefix="/hits", tags=["hits"])
 
@@ -21,6 +21,7 @@ class CreateHITBody(BaseModel):
     target_assignments: int = 1
     min_approval_rate: int | None = None
     required_tags: str | None = None
+    required_quiz_id: int | None = None
     items: list = []
     labels: list = []
     form_fields: list | None = None
@@ -41,6 +42,7 @@ def hit_counts(db: Session, hit_id: int):
 
 def hit_dict(db: Session, hit: HIT):
     counts = hit_counts(db, hit.id)
+    quiz = db.query(Quiz).filter(Quiz.id == hit.required_quiz_id).first() if hit.required_quiz_id else None
     payload = {
         "id": hit.id,
         "requester_id": hit.requester_id,
@@ -52,6 +54,8 @@ def hit_dict(db: Session, hit: HIT):
         "target_assignments": hit.target_assignments,
         "min_approval_rate": hit.min_approval_rate,
         "required_tags": hit.required_tags,
+        "required_quiz_id": hit.required_quiz_id,
+        "required_quiz_title": quiz.title if quiz else None,
         "status": hit.status,
         "created_at": hit.created_at,
         "counts": counts,
@@ -75,6 +79,10 @@ def create_hit(body: CreateHITBody, user: User = Depends(current_user), db: Sess
         raise HTTPException(400, "target_assignments must be at least 1")
     if body.reward_cents < 1:
         raise HTTPException(400, "reward must be at least 1 credit")
+    if body.required_quiz_id is not None:
+        quiz = db.query(Quiz).filter(Quiz.id == body.required_quiz_id, Quiz.creator_id == user.id).first()
+        if not quiz:
+            raise HTTPException(400, "required_quiz_id must reference one of your quizzes")
     try:
         items = parse_items(json.dumps(body.items))
     except ValueError as e:
@@ -91,6 +99,7 @@ def create_hit(body: CreateHITBody, user: User = Depends(current_user), db: Sess
         target_assignments=body.target_assignments,
         min_approval_rate=body.min_approval_rate,
         required_tags=body.required_tags,
+        required_quiz_id=body.required_quiz_id,
         items_json=json.dumps(body.items),
         labels_json=json.dumps(body.labels),
         form_fields_json=json.dumps(body.form_fields) if body.form_fields else None,
@@ -124,6 +133,10 @@ def available_hits(user: User = Depends(current_user), db: Session = Depends(get
         if h.min_approval_rate is not None and (stats["score"] is None or stats["score"] < h.min_approval_rate):
             qualified = False
             reason = f"requires {h.min_approval_rate}% approval rate"
+        if h.required_quiz_id is not None and not quiz_passed(db, user.id, h.required_quiz_id):
+            qualified = False
+            quiz_title = db.query(Quiz).filter(Quiz.id == h.required_quiz_id).first()
+            reason = f"requires passing quiz: {quiz_title.title if quiz_title else 'unlisted quiz'}"
         if h.id in mine_by_hit:
             qualified = False
             reason = "already assigned"

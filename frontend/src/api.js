@@ -1,5 +1,23 @@
 const API_BASE = "/api";
 
+export async function downloadExport(hitId, format) {
+  const res = await fetch(`${API_BASE}/export/${hitId}?format=${format}`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error((data && data.detail) || res.statusText);
+  }
+  const text = format === "json" ? JSON.stringify(await res.json(), null, 2) : await res.text();
+  const type = format === "json" ? "application/json" : "text/csv";
+  const blob = new Blob([text], { type });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `hit-${hitId}-export.${format}`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 export function getToken() {
   return localStorage.getItem("tf_token");
 }
@@ -52,4 +70,8 @@ export const api = {
   export: (id, format) => request(`/export/${id}?format=${format}`),
   import: (body) => request("/import/predictions", { method: "POST", body }),
   consensus: (id) => request(`/hits/${id}/consensus`),
+  listQuizzes: () => request("/quizzes"),
+  createQuiz: (title, questions, pass_score_pct) => request("/quizzes", { method: "POST", body: { title, questions, pass_score_pct } }),
+  takeQuiz: (id) => request(`/quizzes/${id}/take`),
+  submitQuiz: (id, answers) => request(`/quizzes/${id}/submit`, { method: "POST", body: { answers } }),
 };

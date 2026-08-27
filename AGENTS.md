@@ -10,12 +10,12 @@ A Mechanical Turk–style crowdsourcing platform for ML workflows (annotation, H
 
 ## Layout
 - `backend/app/main.py` — FastAPI app, CORS, router mounts.
-- `backend/app/models.py` — User, HIT, Assignment, LedgerEntry.
+- `backend/app/models.py` — User, HIT, Assignment, LedgerEntry, Quiz, QuizResult.
 - `backend/app/tasks.py` — task-type registry (bounding-box, classification, categorization, moderation, data-collection, hitl-validation) + server-side answer validation.
-- `backend/app/routers/{auth,hits,assignments,extra}.py` — endpoints; `routers/deps.py` for auth + approval-rate helpers.
-- `backend/app/seed.py` — idempotent demo seed (users: alice/bob/carol, password `<name>123`).
+- `backend/app/routers/{auth,hits,assignments,extra,quizzes}.py` — endpoints; `routers/deps.py` for auth + approval-rate + quiz-passed helpers.
+- `backend/app/seed.py` — idempotent demo seed (users: alice/bob/carol, password `<name>123`, plus a `Quiz` and a bbox HIT gated on it).
 - `frontend/src/api.js` — fetch client w/ bearer token; `frontend/src/App.jsx` routes.
-- `frontend/src/components/` — Header, Login, RequesterDashboard, CreateHIT, HITDetail, Marketplace, TaskWorkspace, MyWork, Wallet, ImportPredictions, BoundingBoxCanvas.
+- `frontend/src/components/` — Header, Login, RequesterDashboard, CreateHIT, HITDetail, Marketplace, TaskWorkspace, MyWork, Wallet, ImportPredictions, QuizManager, QuizTake, BoundingBoxCanvas.
 
 ## Useful commands
 - Seed (idempotent, skips if 'alice' exists): `cd backend && python -m app.seed`
@@ -26,6 +26,6 @@ A Mechanical Turk–style crowdsourcing platform for ML workflows (annotation, H
 - Wallets are computed from LedgerEntry rows (auditability).
 - Answer validation duplicated server-side in `tasks.py`; UI validation is a nicety only.
 - Bounding-box export is COCO-like (images/categories/annotations); other types are generic JSON/CSV.
-- Qualification uses worker approval rate gate at accept time.
+- Qualification gates at accept time: approval-rate threshold plus required quiz (QuizResult.best passed) both checked in `routers/deps.py`.
 - `hitl-validation` HITs store per-item `prediction` from `POST /import/predictions`.
 - HIT status: published→closed; Assignment status: accepted→submitted→approved|rejected.

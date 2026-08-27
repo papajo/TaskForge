@@ -6,6 +6,8 @@ import Login from "./components/Login.jsx";
 import RequesterDashboard from "./components/RequesterDashboard.jsx";
 import CreateHIT from "./components/CreateHIT.jsx";
 import HITDetail from "./components/HITDetail.jsx";
+import QuizManager from "./components/QuizManager.jsx";
+import QuizTake from "./components/QuizTake.jsx";
 import Marketplace from "./components/Marketplace.jsx";
 import TaskWorkspace from "./components/TaskWorkspace.jsx";
 import MyWork from "./components/MyWork.jsx";
@@ -37,6 +39,8 @@ export default function App() {
           <Route path="/dashboard" element={<Gate role="requester"><RequesterDashboard /></Gate>} />
           <Route path="/create" element={<Gate role="requester"><CreateHIT /></Gate>} />
           <Route path="/hits/:id" element={<Gate role="requester"><HITDetail /></Gate>} />
+          <Route path="/quizzes" element={<Gate role="requester"><QuizManager /></Gate>} />
+          <Route path="/quiz/:quizId" element={<Gate role="worker"><QuizTake /></Gate>} />
           <Route path="/import" element={<Gate role="requester"><ImportPredictions /></Gate>} />
           <Route path="/marketplace" element={<Gate role="worker"><Marketplace /></Gate>} />
           <Route path="/work/:hitId/:assignmentId" element={<Gate role="worker"><TaskWorkspace /></Gate>} />

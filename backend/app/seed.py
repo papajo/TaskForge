@@ -1,7 +1,7 @@
 import json
 
 from .db import Base, SessionLocal, engine
-from .models import Assignment, HIT, LedgerEntry, User
+from .models import Assignment, HIT, LedgerEntry, Quiz, User
 from .security import hash_password
 
 Base.metadata.create_all(bind=engine)
@@ -19,7 +19,7 @@ def run():
     db.refresh(alice)
     db.refresh(bob)
 
-    def hit(title, desc, instr, ttype, reward, target, items, labels=None, fields=None, approval=None, tags=None):
+    def hit(title, desc, instr, ttype, reward, target, items, labels=None, fields=None, approval=None, tags=None, quiz=None):
         h = HIT(
             requester_id=alice.id,
             title=title,
@@ -30,6 +30,7 @@ def run():
             target_assignments=target,
             min_approval_rate=approval,
             required_tags=tags,
+            required_quiz_id=quiz,
             items_json=json.dumps(items),
             labels_json=json.dumps(labels or []),
             form_fields_json=json.dumps(fields) if fields else None,
@@ -38,6 +39,27 @@ def run():
         db.commit()
         db.refresh(h)
         return h
+
+    quiz = Quiz(
+        creator_id=alice.id,
+        title="Annotation quality basics",
+        pass_score_pct=100,
+        questions_json=json.dumps([
+            {
+                "q": "A good bounding box should...",
+                "options": ["be as large as possible", "tightly contain the object", "ignore occluded edges"],
+                "answer": 1,
+            },
+            {
+                "q": "What should you do if a label list does not fit an object?",
+                "options": ["submit anyway", "leave that object unboxed", "pick the closest label"],
+                "answer": 1,
+            },
+        ]),
+    )
+    db.add(quiz)
+    db.commit()
+    db.refresh(quiz)
 
     bbox = hit(
         "Draw bounding boxes on street objects",
@@ -51,6 +73,7 @@ def run():
             {"id": 2, "url": "https://picsum.photos/seed/street2/640/360"},
         ],
         labels=["car", "pedestrian", "bicycle", "traffic sign"],
+        quiz=quiz.id,
     )
 
     classification = hit(

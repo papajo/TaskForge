@@ -15,6 +15,7 @@ export default function Header() {
               <>
                 <Link to="/dashboard" className="hover:text-emerald-300">Dashboard</Link>
                 <Link to="/create" className="hover:text-emerald-300">Create HIT</Link>
+                <Link to="/quizzes" className="hover:text-emerald-300">Quizzes</Link>
                 <Link to="/import" className="hover:text-emerald-300">Import Predictions</Link>
               </>
             ) : (

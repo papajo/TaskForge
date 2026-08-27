@@ -48,3 +48,12 @@ The Vite dev server proxies `/api` → `localhost:12001`.
 - `POST /assignments/{hit_id}/accept`, `POST /assignments/{id}/submit`, `GET /assignments/mine`
 - `POST /assignments/{id}/{approve|reject}` (requester), `GET /wallet`
 - `GET /export/{id}?format=json|csv`, `POST /import/predictions`, `GET /hits/{id}/consensus`
+- `POST /quizzes`, `GET /quizzes`, `GET /quizzes/{id}/take`, `POST /quizzes/{id}/submit` — qualification quizzes (requesters create, workers take, HITs can require a pass)
+
+## Qualification quizzes
+
+Requesters build multiple-choice quizzes (`/quizzes`) and can attach one to a HIT. Workers must pass before accepting; failures can be retried. The marketplace shows the gating reason and a direct "Take quiz" shortcut.
+
+## CSV item upload
+
+On the Create-HIT form you can upload a CSV file instead of pasting JSON. Headers `id,text` or `id,url`; each non-header row becomes an item.

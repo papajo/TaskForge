@@ -25,3 +25,13 @@ def worker_approval_rate(db: Session, worker_id: int):
     total = approved + rejected
     rate = round(100 * approved / total) if total else None
     return {"approved": approved, "rejected": rejected, "score": rate}
+
+
+def quiz_passed(db: Session, worker_id: int, quiz_id: int) -> bool:
+    from ..models import QuizResult
+    result = db.query(QuizResult).filter(
+        QuizResult.worker_id == worker_id,
+        QuizResult.quiz_id == quiz_id,
+        QuizResult.passed == 1,
+    ).first()
+    return result is not None

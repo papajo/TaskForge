@@ -1,6 +1,35 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api } from "../api.js";
+import { api, downloadExport } from "../api.js";
+
+function ExportMenu({ hitId }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  async function pick(format) {
+    setOpen(false);
+    setBusy(true);
+    try {
+      await downloadExport(hitId, format);
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="relative inline-block text-left">
+      <button onClick={() => setOpen((o) => !o)} disabled={busy} className="text-slate-300 disabled:opacity-50">
+        {busy ? "Exporting…" : "Export ▾"}
+      </button>
+      {open && (
+        <div className="absolute z-10 mt-1 w-28 rounded border border-slate-700 bg-slate-800 shadow">
+          <button onClick={() => pick("json")} className="block w-full px-3 py-1 text-left text-sm hover:bg-slate-700">JSON</button>
+          <button onClick={() => pick("csv")} className="block w-full px-3 py-1 text-left text-sm hover:bg-slate-700">CSV</button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function RequesterDashboard() {
   const [hits, setHits] = useState([]);
@@ -46,24 +75,7 @@ export default function RequesterDashboard() {
             <div className="mt-3 flex gap-4 text-sm">
               <Link to={`/hits/${h.id}`} className="text-emerald-400">Open</Link>
               {h.status === "published" && <button onClick={() => close(h.id)} className="text-yellow-400">Close</button>}
-              <button
-                onClick={async () => {
-                  try {
-                    const res = await fetch(`/api/export/${h.id}?format=json`, { headers: { Authorization: `Bearer ${localStorage.getItem("tf_token")}` } });
-                    const data = await res.json();
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-                    const a = document.createElement("a");
-                    a.href = URL.createObjectURL(blob);
-                    a.download = `hit-${h.id}-export.json`;
-                    a.click();
-                  } catch (e) {
-                    alert(String(e));
-                  }
-                }}
-                className="text-slate-300"
-              >
-                Export JSON
-              </button>
+              <ExportMenu hitId={h.id} />
             </div>
           </div>
         ))}

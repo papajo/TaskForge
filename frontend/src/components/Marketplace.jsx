@@ -34,6 +34,7 @@ export default function Marketplace() {
                 <span className="font-semibold">{h.title}</span>
                 <span className="text-xs bg-slate-800 px-2 py-0.5 rounded">{h.task_type}</span>
                 {h.min_approval_rate != null && <span className="text-xs bg-indigo-700 px-2 py-0.5 rounded">requires {h.min_approval_rate}% approval</span>}
+                {h.required_quiz_title && <span className="text-xs bg-amber-700 px-2 py-0.5 rounded">quiz: {h.required_quiz_title}</span>}
               </div>
               <p className="text-sm text-slate-400 mt-1">{h.description}</p>
               <p className="text-sm mt-2">reward <span className="text-emerald-400">{h.reward_cents}¢</span> · {h.remaining} slots left</p>
@@ -41,7 +42,12 @@ export default function Marketplace() {
             {h.eligible ? (
               <button onClick={() => accept(h.id)} className="shrink-0 bg-emerald-600 px-3 py-1 rounded hover:bg-emerald-500 h-fit">Accept</button>
             ) : (
-              <span className="shrink-0 text-slate-500 text-sm h-fit">{h.block_reason}</span>
+              <div className="shrink-0 text-right">
+                <span className="text-slate-500 text-sm">{h.block_reason}</span>
+                {h.required_quiz_id && h.block_reason?.includes("quiz") && (
+                  <button onClick={() => nav(`/quiz/${h.required_quiz_id}`)} className="block mt-1 bg-amber-700 px-3 py-1 rounded hover:bg-amber-600 text-sm ml-auto">Take quiz</button>
+                )}
+              </div>
             )}
           </div>
         ))}

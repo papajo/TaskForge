@@ -1,6 +1,23 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
+
+function parseCsv(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 1) throw new Error("CSV is empty");
+  const header = lines[0].split(",").map((h) => h.trim().toLowerCase());
+  const textIdx = header.indexOf("text");
+  const urlIdx = header.indexOf("url");
+  const idIdx = header.indexOf("id");
+  if (textIdx === -1 && urlIdx === -1) throw new Error("CSV must have a 'text' or 'url' column");
+  return lines.slice(1).filter((l) => l.trim()).map((line, i) => {
+    const parts = line.split(",").map((p) => p.trim());
+    const item = { id: idIdx >= 0 ? parts[idIdx] : i + 1 };
+    if (textIdx >= 0) item.text = parts[textIdx];
+    else item.url = parts[urlIdx];
+    return item;
+  });
+}
 
 const TASK_TYPES = [
   { value: "bounding-box", label: "Bounding Box (computer vision annotation)" },
@@ -21,13 +38,19 @@ export default function CreateHIT() {
     target_assignments: 3,
     min_approval_rate: "",
     required_tags: "",
+    required_quiz_id: "",
     itemsText: "",
     labelsText: "",
     fieldsText: "",
   });
   const [hint, setHint] = useState("");
   const [error, setError] = useState("");
+  const [quizzes, setQuizzes] = useState([]);
   const nav = useNavigate();
+
+  useEffect(() => {
+    api.listQuizzes().then(setQuizzes).catch(() => {});
+  }, []);
 
   function set(field) {
     return (e) => setForm({ ...form, [field]: e.target.value });
@@ -44,6 +67,23 @@ export default function CreateHIT() {
       setForm((f) => ({ ...f, itemsText: '[{"id":1,"text":"Sample text here"},{"id":2,"text":"Another snippet"}]' }));
       setHint("Each item needs id + text.");
     }
+  }
+
+  function onCsvUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const items = parseCsv(reader.result);
+        setForm((f) => ({ ...f, itemsText: JSON.stringify(items) }));
+        setHint(`Loaded ${items.length} items from CSV.`);
+        setError("");
+      } catch (err) {
+        setError(`CSV error: ${err.message}`);
+      }
+    };
+    reader.readAsText(file);
   }
 
   async function doSubmit(e) {
@@ -68,6 +108,7 @@ export default function CreateHIT() {
         target_assignments: Number(form.target_assignments),
         min_approval_rate: form.min_approval_rate === "" ? null : Number(form.min_approval_rate),
         required_tags: form.required_tags || null,
+        required_quiz_id: form.required_quiz_id === "" ? null : Number(form.required_quiz_id),
         items,
         labels,
         form_fields: fields.length ? fields : null,
@@ -104,6 +145,12 @@ export default function CreateHIT() {
           <label>Tags (optional)
             <input value={form.required_tags} onChange={set("required_tags")} className="p-2 rounded bg-slate-800 border border-slate-700 w-full sm:w-40" />
           </label>
+          <label>Qualification quiz (optional)
+            <select value={form.required_quiz_id} onChange={set("required_quiz_id")} className="p-2 rounded bg-slate-800 border border-slate-700">
+              <option value="">None</option>
+              {quizzes.map((q) => <option key={q.id} value={q.id}>{q.title} ({q.question_count}q)</option>)}
+            </select>
+          </label>
         </div>
         {needsLabels && (
           <label className="text-sm">Allowed labels (comma separated, e.g. car, pedestrian)
@@ -115,10 +162,13 @@ export default function CreateHIT() {
             <input value={form.fieldsText} onChange={set("fieldsText")} className="p-2 rounded bg-slate-800 border border-slate-700 w-full" />
           </label>
         )}
-        <label className="text-sm flex justify-between">Items (JSON array of {`{"id":1,"text":"..."}`} or {`{"id":1,"url":"..."}`})
+        <label className="text-sm flex justify-between">Items — JSON, or upload CSV below
           <button type="button" onClick={example} className="text-emerald-400 text-xs">insert example</button>
         </label>
         <textarea rows={6} required value={form.itemsText} onChange={set("itemsText")} className="p-2 rounded bg-slate-800 border border-slate-700 font-mono text-sm" placeholder='[{"id":1,"text":"..."}]' />
+        <label className="text-xs text-slate-400 flex items-center gap-2">Upload CSV (headers: id,text or id,url)
+          <input type="file" accept=".csv,text/csv" onChange={onCsvUpload} className="text-xs" />
+        </label>
         {hint && <p className="text-xs text-slate-400">{hint}</p>}
         {error && <p className="text-red-400 text-sm">{error}</p>}
         <button className="bg-emerald-600 hover:bg-emerald-500 p-2 rounded font-medium">Publish HIT</button>

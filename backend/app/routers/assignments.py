@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from ..db import get_db
 from ..models import Assignment, HIT, LedgerEntry, User
 from ..tasks import validate_answer
-from .deps import current_user, worker_approval_rate
+from .deps import current_user, quiz_passed, worker_approval_rate
 
 router = APIRouter(prefix="/assignments", tags=["assignments"])
 
@@ -45,6 +45,8 @@ def accept(hit_id: int, user: User = Depends(current_user), db: Session = Depend
     stats = worker_approval_rate(db, user.id)
     if hit.min_approval_rate is not None and (stats["score"] is None or stats["score"] < hit.min_approval_rate):
         raise HTTPException(403, "qualification threshold not met")
+    if hit.required_quiz_id is not None and not quiz_passed(db, user.id, hit.required_quiz_id):
+        raise HTTPException(403, "quiz qualification not passed")
     existing = db.query(Assignment).filter(Assignment.hit_id == hit_id, Assignment.worker_id == user.id).first()
     if existing:
         raise HTTPException(400, "already assigned")
